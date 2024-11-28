@@ -18,13 +18,19 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
 public class MainActivity extends AppCompatActivity {
-    TextView countdown;
-    EditText timerInput;
-    Button startBtn;
-    Button pauseBtn;
-    Button resetBtn;
-    CountDownTimer timerUtil;
-    int startTime = 0;
+    enum Status {
+        RESET,
+        RUNNING,
+        PAUSED
+    }
+    Status countdownStatus = Status.RESET;
+    private TextView countdown;
+    private EditText timerInput;
+    private Button startBtn;
+    private Button resetBtn;
+    private CountDownTimer timerUtil;
+    private int startTime = 0;
+    private long millisLeft = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -52,41 +58,78 @@ public class MainActivity extends AppCompatActivity {
         });
         startBtn = findViewById(R.id.start);
         startBtn.setOnClickListener(this::startCountdown);
-        pauseBtn = findViewById(R.id.pause);
-        pauseBtn.setOnClickListener(this::pauseCountdown);
         resetBtn = findViewById(R.id.reset);
         resetBtn.setOnClickListener(this::resetCountdown);
     }
 
     public void startCountdown(View view) {
-        startBtn.setEnabled(false);
-        startTime = Integer.parseInt(countdown.getText().toString());
-        timerUtil = new CountDownTimer(startTime*1000, 1000) {
+        if (countdownStatus != Status.RESET) { return; }
+        try {
+            startTime = Integer.parseInt(countdown.getText().toString());
+        } catch (NumberFormatException e) { return; }
+        timerUtil = new CountDownTimer((long) startTime*1000, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
                 countdown.setText(""+millisUntilFinished/1000);
+                millisLeft = millisUntilFinished;
             }
 
             @Override
             public void onFinish() {
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
-                v.vibrate(1000);
+                v.vibrate(3000);
                 countdown.setText(""+startTime);
+                startBtn.setOnClickListener(MainActivity.this::startCountdown);
+                startBtn.setText("Start");
+                countdownStatus = Status.RESET;
 
             }
         }.start();
-        startBtn.setEnabled(true);
+        startBtn.setOnClickListener(this::pauseCountdown);
+        startBtn.setText("Pause");
+        countdownStatus = Status.RUNNING;
     }
 
     public void pauseCountdown(View view) {
-        // TODO: implement pause utility and merge pause and start button
+        if (countdownStatus != Status.RUNNING) { return; }
+        timerUtil.cancel();
+        startBtn.setOnClickListener(this::resumeCountdown);
+        startBtn.setText("Resume");
+        countdownStatus = Status.PAUSED;
+    }
+
+    public void resumeCountdown(View view) {
+        if (countdownStatus != Status.PAUSED) { return; }
+        timerUtil = new CountDownTimer(millisLeft, 1000) {
+            @Override
+            public void onTick(long millisUntilFinished) {
+                countdown.setText(""+millisUntilFinished/1000);
+                millisLeft = millisUntilFinished;
+            }
+
+            @Override
+            public void onFinish() {
+                Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                v.vibrate(3000);
+                countdown.setText(""+startTime);
+                startBtn.setOnClickListener(MainActivity.this::startCountdown);
+                startBtn.setText("Start");
+                countdownStatus = Status.RESET;
+
+            }
+        }.start();
+        startBtn.setOnClickListener(this::pauseCountdown);
+        startBtn.setText("Pause");
+        countdownStatus = Status.RUNNING;
     }
 
     public void resetCountdown(View view) {
-        if (timerUtil == null){
-            return;
+        if (countdownStatus == Status.RUNNING) {
+            timerUtil.cancel();
         }
-        timerUtil.cancel();
         countdown.setText(""+startTime);
+        startBtn.setOnClickListener(this::startCountdown);
+        startBtn.setText("Start");
+        countdownStatus = Status.RESET;
     }
 }
