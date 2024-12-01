@@ -30,10 +30,9 @@ public class TimerService extends Service {
             startTimer(timerDuration);
         }
         Notification notification = new NotificationCompat.Builder(this, "TIMER_SERVICE_CHANNEL")
-                // TODO: customize
                 .setContentTitle("Timer Running")
                 .setContentText("Your timer is active.")
-                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .setSmallIcon(R.drawable.ic_stat_name)
                 .build();
 
         startForeground(1, notification);
@@ -92,6 +91,7 @@ public class TimerService extends Service {
             @Override
             public void onFinish() {
                 Vibrator v = (Vibrator) getSystemService(Context.VIBRATOR_SERVICE);
+                // TODO: maybe better vibrate pattern
                 v.vibrate(3000);
                 Intent intent = new Intent("TIMER_FINISHED");
                 LocalBroadcastManager.getInstance(TimerService.this).sendBroadcast(intent);
