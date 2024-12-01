@@ -25,10 +25,6 @@ public class TimerService extends Service {
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
-        if (intent != null && intent.hasExtra("TIMER_DURATION")) {
-            long timerDuration = intent.getLongExtra("TIMER_DURATION", 0);
-            startTimer(timerDuration);
-        }
         Notification notification = new NotificationCompat.Builder(this, "TIMER_SERVICE_CHANNEL")
                 .setContentTitle("Timer Running")
                 .setContentText("Your timer is active.")
@@ -48,6 +44,11 @@ public class TimerService extends Service {
             }
         };
         LocalBroadcastManager.getInstance(this).registerReceiver(cancelTimerReceiver, new IntentFilter("CANCEL_TIMER"));
+
+        if (intent != null && intent.hasExtra("TIMER_DURATION")) {
+            long timerDuration = intent.getLongExtra("TIMER_DURATION", 0);
+            startTimer(timerDuration);
+        }
 
         return START_NOT_STICKY;
     }
@@ -82,6 +83,11 @@ public class TimerService extends Service {
     }
 
     private void startTimer(long duration) {
+        // make sure the cpu doesn't sleep when on lock screen
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TimerService:WakeLock");
+        wakeLock.acquire((duration + 1)*1000);
+
         timerUtil = new CountDownTimer(duration * 1000, 1000) {
             @Override
             public void onTick(long millisUntilFinished) {
@@ -100,11 +106,6 @@ public class TimerService extends Service {
 
             }
         }.start();
-
-        // make sure the cpu doesn't sleep when on lock screen
-        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
-        wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "TimerService:WakeLock");
-        wakeLock.acquire(duration*1000);
     }
 
     private void sendUpdate(long remainingTime) {
